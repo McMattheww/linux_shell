@@ -17,74 +17,77 @@ int main(int argc, char* argv[]) {
 
 	pid_t pid;
 	int status, tokenCount, pipeCount, round;
-	//int outputPipe[2] = {NULL, NULL};
-	//int inputPipe[2] = {NULL, NULL};
+	int outputPipe[2] = {-1, -1};
+	int inputPipe[2] = {-1, -1};
+	int pvc[2] = {-1, -1};
 
 	fgets(input, maxInput, stdin);
 	while(!(tolower(input[0]) == 'q' && tolower(input[1]) == 'u' && tolower(input[2]) == 'i' && tolower(input[3]) == 't')){
 		tokenCount = 0; pipeCount = 0; round = 0;
 
 		tok = strtok(input, " \n");
-		while (tok != NULL && tokenCount < maxTokens - 1){
+		while (tok != NULL && tokenCount < maxTokens){
 			tokens[tokenCount] = tok;
 			tokenCount++;
+			if (tok[0] == '|' && tok[1] == '\0'){
+				pipeCount++;
+			}
 			tok = strtok(NULL, " \n");
 		}
 
 
-
+		int startIndex = 0;
 		for (int i = 0; i < tokenCount; i++){
 			if (( *(tokens[i]) == '|' && *(tokens[i] + 1) == '\0') || (i == tokenCount - 1)){
-				printf("FORK");		
-			}
-		}
-
-/*
-
-		int commands = pipeCount + 1;
-		int currentToken = 0;
-		while (round < pipeCount+1){
+				printf("FORK");
+				fflush(stdout);
 
 
-			if (outputPipe != null){ //program inherits input pipe from output of last program
-				inputPipe = OutputPipe;
-			}
-			if (round != pipeCount){ //only create new pipe if this is not the last command
-				outputPipe = pipe();
-			}
-
-		
-			if ((pid = fork()) < 0){
-				perror("fork failed");
-				exit(1);
-			}
-			else if (pid == 0){ //the child
-				tokens[tokenCount] = NULL; //set last argument to NULL as required when passing to execute a program
+				if (round != pipeCount){
+					pipe(pvc);
+				}
 				
-				if (outputPipe != NULL){
-					close(outputPipe[0]);
-					dup2(outputPipe[1], stdout)
-				}
-				if (inputPipe != NULL){
-					close(outputPipe[1]);
-					dup2(outputPipe[0], stdin);
-				}
+				if (startIndex != 0){ //program inherits input pipe from output of last program
+                                	inputPipe[0] = outputPipe[0];
+					inputPipe[1] = outputPipe[1];
+                        	}
+                        	if (round != pipeCount){ //only create new pipe if this is not the last command
+                                	pipe(outputPipe);
+                        	}
 
+				if ((pid = fork()) < 0){
+                                	perror("fork failed");
+                                	exit(1);
+                        	}
+                        	else if (pid == 0){ //the child
+					
+                                	if (outputPipe[0] >= 0){
+                                        	close(outputPipe[0]);
+                                        	dup2(outputPipe[1], 1);
+                                	}
+                                	if (inputPipe[0] >= 0){
+                                        	close(inputPipe[1]);
+                                        	dup2(inputPipe[0], 0);
+                                	}
+					
 
-
-				execvp(tokens[0], tokens); 
-				printf("launching %s failed", tokens[0]);
-				perror("execution of program failed"); 
-				exit(1);
-			}		
-			else{ //the parent
-			      close(outputPipe);
-			        round++;
-
-				wait(&status);// wait for child program to exit before continuing to get input 
+					char* test[] = {"test", NULL};
+                                	execvp(tokens[startIndex], test);
+                                	printf("launching %s failed", tokens[0]);
+                                	perror("execution of program failed");
+                                	exit(1);
+                        	}
+                        	else{ //the parent
+                        		close(inputPipe[0]); close(inputPipe[1]);
+					inputPipe[0] = -1;
+                                	wait(&status);// wait for child program to exit before continuing to get input
+                        	}
+				round++;
+				startIndex = i + 1;		
 			}
 		}
-*/
+
+
 		fgets(input, maxInput, stdin);
 	}
 	return 0;
