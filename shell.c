@@ -12,13 +12,13 @@ int main(int argc, char* argv[]) {
 
 	char input[maxInput] = "    "; //user shell input
 	char* tokens[maxTokens]; //tokenized input
-	char* command[20] //tokens for a single command - program name + args
+	char* command[20]; //tokens for a single command - program name + args
 	char* tok; //curent token
 
 	pid_t pid;
 	int status, tokenCount, pipeCount, round;
-	int outputPipe[2] = NULL;
-	int inputPipe[2] = NULL;
+	//int outputPipe[2] = {NULL, NULL};
+	//int inputPipe[2] = {NULL, NULL};
 
 	fgets(input, maxInput, stdin);
 	while(!(tolower(input[0]) == 'q' && tolower(input[1]) == 'u' && tolower(input[2]) == 'i' && tolower(input[3]) == 't')){
@@ -28,12 +28,18 @@ int main(int argc, char* argv[]) {
 		while (tok != NULL && tokenCount < maxTokens - 1){
 			tokens[tokenCount] = tok;
 			tokenCount++;
-			if (tok[0] == '|' && tok[1] == '\0'){
-				pipeCount++;
-			}
 			tok = strtok(NULL, " \n");
 		}
 
+
+
+		for (int i = 0; i < tokenCount; i++){
+			if (( *(tokens[i]) == '|' && *(tokens[i] + 1) == '\0') || (i == tokenCount - 1)){
+				printf("FORK");		
+			}
+		}
+
+/*
 
 		int commands = pipeCount + 1;
 		int currentToken = 0;
@@ -78,7 +84,7 @@ int main(int argc, char* argv[]) {
 				wait(&status);// wait for child program to exit before continuing to get input 
 			}
 		}
-
+*/
 		fgets(input, maxInput, stdin);
 	}
 	return 0;
