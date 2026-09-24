@@ -19,7 +19,7 @@ typedef struct command_t {
 
 
 void executeCommand(command_t command){
-	printf("running: %s", command.name);
+	printf("running: %s, arguments: %i \n", command.name, command.argc);
 	return;
 }
 
@@ -33,6 +33,8 @@ void processInput(char* tokens[], int tokenCount){
 		com.argc++;
 
 		if ((*(tokens[i]) == '|' && *(tokens[i]+1) == '\0') || i == tokenCount - 1){
+			com.args[i - offset + 1] = NULL;
+			if (*(tokens[i]) == '|' && *(tokens[i]+1) == '\0'){com.args[i - offset] = NULL; com.argc--;}
 			com.name = com.args[0];
 			executeCommand(com);
 			com.argc = 0;
