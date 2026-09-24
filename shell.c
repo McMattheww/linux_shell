@@ -20,16 +20,31 @@ typedef struct command_t {
 
 
 void executeCommand(command_t command){
-	printf("running: %s, arguments: %i \n", command.name, command.argc);
-	execvp(command.name, command.args); //exec currently takes over parent
-	return;
+        printf("running: %s, arguments: %i \n", command.name, command.argc);
+        execvp(command.name, command.args); 
+        return;
 }
 
-void executeCommands(command_t* commands, int commandCount){
-	for (int i = 0; i < commandCount; i++){
-		executeCommand(commands[i]);
+void executeCommands(command_t* commands, int commandCount, int current){
+
+	int status;
+	pid_t pid;
+	if (current == commandCount){
+		wait(&status);
 	}
-	return;
+	else{
+		if ((pid = fork()) < 0){
+			perror("fork failed");
+			exit(1);
+		}
+		else if (pid == 0){ //the child
+			executeCommand(commands[current]);
+		}
+		else{ //the parent
+			current++;
+			executeCommands(commands, commandCount, current);
+		}
+	}
 }
 
 void processInput(char* tokens[], int tokenCount){
@@ -58,7 +73,7 @@ void processInput(char* tokens[], int tokenCount){
 		
 		i++;
 	}
-	executeCommands(commands, commandCount);
+	executeCommands(commands, commandCount, 0);
 
 	return;	
 
@@ -69,10 +84,8 @@ int main(int argc, char* argv[]) {
 
 	char input[maxInput] = "    "; //user shell input
 	char* tokens[maxTokens]; //tokenized input
+	int tokenCount; // amount of tokens in "tokens"
 	char* tok; //curent token
-
-
-	int tokenCount;
 
 	fgets(input, maxInput, stdin);
 	while(!(tolower(input[0]) == 'q' && tolower(input[1]) == 'u' && tolower(input[2]) == 'i' && tolower(input[3]) == 't')){
