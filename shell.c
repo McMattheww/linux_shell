@@ -87,6 +87,7 @@ int main(int argc, char* argv[]) {
 	int tokenCount; // amount of tokens in "tokens"
 	char* tok; //curent token
 
+	printf("Welcome to VM shell\nenter command followed by arguments\nenter | between commands to pipe\n");
 	fgets(input, maxInput, stdin);
 	while(!(tolower(input[0]) == 'q' && tolower(input[1]) == 'u' && tolower(input[2]) == 'i' && tolower(input[3]) == 't')){
 		tokenCount = 0;
