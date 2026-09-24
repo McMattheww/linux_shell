@@ -7,23 +7,58 @@
 #include <sys/types.h>
 #define maxInput 300
 #define maxTokens 100
+#define maxArgs 20
+
+
+typedef struct command_t {
+	char* name;
+	char* args[maxArgs];
+	int argc;
+} command_t;
+
+
+
+void executeCommand(command_t command){
+	printf("running: %s", command.name);
+	return;
+}
+
+void processInput(char* tokens[], int tokenCount){
+	
+	int i = 0; int offset = 0;
+	command_t com;
+	com.argc = 0;
+	while(i < tokenCount){
+		com.args[i - offset] = tokens[i];
+		com.argc++;
+
+		if ((*(tokens[i]) == '|' && *(tokens[i]+1) == '\0') || i == tokenCount - 1){
+			com.name = com.args[0];
+			executeCommand(com);
+			com.argc = 0;
+			offset = i + 1;
+		}
+		
+		i++;
+	}
+
+	return;	
+
+}
+
 
 int main(int argc, char* argv[]) {
 
 	char input[maxInput] = "    "; //user shell input
 	char* tokens[maxTokens]; //tokenized input
-	char* command[20]; //tokens for a single command - program name + args
 	char* tok; //curent token
 
-	pid_t pid;
-	int status, tokenCount, pipeCount, round;
-	int outputPipe[2] = {-1, -1};
-	int inputPipe[2] = {-1, -1};
-	int pvc[2] = {-1, -1};
+
+	int tokenCount, pipeCount;
 
 	fgets(input, maxInput, stdin);
 	while(!(tolower(input[0]) == 'q' && tolower(input[1]) == 'u' && tolower(input[2]) == 'i' && tolower(input[3]) == 't')){
-		tokenCount = 0; pipeCount = 0; round = 0;
+		tokenCount = 0; pipeCount = 0;
 
 		tok = strtok(input, " \n");
 		while (tok != NULL && tokenCount < maxTokens){
@@ -35,51 +70,12 @@ int main(int argc, char* argv[]) {
 			tok = strtok(NULL, " \n");
 		}
 
-
-		int startIndex = 0;
-		for (int i = 0; i < tokenCount; i++){
-			if (( *(tokens[i]) == '|' && *(tokens[i] + 1) == '\0') || (i == tokenCount - 1)){
-				printf("FORK");
-				fflush(stdout);
-
-
-				if (round != pipeCount){
-					pipe(pvc);
-				}
-
-
-				if ((pid = fork()) < 0){
-                                	perror("fork failed");
-                                	exit(1);
-                        	}
-                        	else if (pid == 0){ //the child
-					
-					if (round != 0){
-						dup2(pvc[0], 0);
-					}
-                                	if (round != pipeCount){
-						dup2(pvc[1], 1);
-					}
-					close(pvc[0]); close(pvc[1]);
-					
-
-					char* test[] = {"test", NULL};
-                                	execvp(tokens[startIndex], test);
-                                	printf("launching %s failed", tokens[0]);
-                                	perror("execution of program failed");
-                                	exit(1);
-                        	}
-                        	else{ //the parent
-                        		close(pvc[0]); close(pvc[1]);
-                                	wait(&status);// wait for child program to exit before continuing to get input
-                        	}
-				round++;
-				startIndex = i + 1;		
-			}
-		}
-
-
+		processInput(tokens, tokenCount);
 		fgets(input, maxInput, stdin);
 	}
+
 	return 0;
+
 }
+
+
