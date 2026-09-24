@@ -8,6 +8,7 @@
 #define maxInput 300
 #define maxTokens 100
 #define maxArgs 20
+#define maxCommands 20
 
 
 typedef struct command_t {
@@ -20,30 +21,44 @@ typedef struct command_t {
 
 void executeCommand(command_t command){
 	printf("running: %s, arguments: %i \n", command.name, command.argc);
-	execvp(command.name, command.args); //because there's currently no forking, exec takes over program 
+	execvp(command.name, command.args); //exec currently takes over parent
+	return;
+}
+
+void executeCommands(command_t* commands, int commandCount){
+	for (int i = 0; i < commandCount; i++){
+		executeCommand(commands[i]);
+	}
 	return;
 }
 
 void processInput(char* tokens[], int tokenCount){
 	
-	int i = 0; int offset = 0;
+	int i = 0; int offset = 0; int commandCount = 0;
+
 	command_t com;
+	command_t commands[maxCommands];
 	com.argc = 0;
-	while(i < tokenCount){
+	while(i < tokenCount && commandCount < maxCommands){
 		com.args[i - offset] = tokens[i];
 		com.argc++;
 
 		if ((*(tokens[i]) == '|' && *(tokens[i]+1) == '\0') || i == tokenCount - 1){
 			com.args[i - offset + 1] = NULL;
-			if (*(tokens[i]) == '|' && *(tokens[i]+1) == '\0'){com.args[i - offset] = NULL; com.argc--;}
+			if (*(tokens[i]) == '|' && *(tokens[i]+1) == '\0'){
+				com.args[i - offset] = NULL; com.argc--;
+			}
 			com.name = com.args[0];
-			executeCommand(com);
+			
+			commands[commandCount] = com;	
+			commandCount++;
 			com.argc = 0;
 			offset = i + 1;
 		}
 		
 		i++;
 	}
+	executeCommands(commands, commandCount);
 
 	return;	
 
