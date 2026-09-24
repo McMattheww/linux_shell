@@ -46,14 +46,7 @@ int main(int argc, char* argv[]) {
 				if (round != pipeCount){
 					pipe(pvc);
 				}
-				
-				if (startIndex != 0){ //program inherits input pipe from output of last program
-                                	inputPipe[0] = outputPipe[0];
-					inputPipe[1] = outputPipe[1];
-                        	}
-                        	if (round != pipeCount){ //only create new pipe if this is not the last command
-                                	pipe(outputPipe);
-                        	}
+
 
 				if ((pid = fork()) < 0){
                                 	perror("fork failed");
@@ -61,14 +54,13 @@ int main(int argc, char* argv[]) {
                         	}
                         	else if (pid == 0){ //the child
 					
-                                	if (outputPipe[0] >= 0){
-                                        	close(outputPipe[0]);
-                                        	dup2(outputPipe[1], 1);
-                                	}
-                                	if (inputPipe[0] >= 0){
-                                        	close(inputPipe[1]);
-                                        	dup2(inputPipe[0], 0);
-                                	}
+					if (round != 0){
+						dup2(pvc[0], 0);
+					}
+                                	if (round != pipeCount){
+						dup2(pvc[1], 1);
+					}
+					close(pvc[0]); close(pvc[1]);
 					
 
 					char* test[] = {"test", NULL};
@@ -78,8 +70,7 @@ int main(int argc, char* argv[]) {
                                 	exit(1);
                         	}
                         	else{ //the parent
-                        		close(inputPipe[0]); close(inputPipe[1]);
-					inputPipe[0] = -1;
+                        		close(pvc[0]); close(pvc[1]);
                                 	wait(&status);// wait for child program to exit before continuing to get input
                         	}
 				round++;
