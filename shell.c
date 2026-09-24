@@ -20,6 +20,7 @@ typedef struct command_t {
 
 void executeCommand(command_t command){
 	printf("running: %s, arguments: %i \n", command.name, command.argc);
+	execvp(command.name, command.args); //because there's currently no forking, exec takes over program 
 	return;
 }
 
@@ -56,19 +57,16 @@ int main(int argc, char* argv[]) {
 	char* tok; //curent token
 
 
-	int tokenCount, pipeCount;
+	int tokenCount;
 
 	fgets(input, maxInput, stdin);
 	while(!(tolower(input[0]) == 'q' && tolower(input[1]) == 'u' && tolower(input[2]) == 'i' && tolower(input[3]) == 't')){
-		tokenCount = 0; pipeCount = 0;
+		tokenCount = 0;
 
 		tok = strtok(input, " \n");
 		while (tok != NULL && tokenCount < maxTokens){
 			tokens[tokenCount] = tok;
 			tokenCount++;
-			if (tok[0] == '|' && tok[1] == '\0'){
-				pipeCount++;
-			}
 			tok = strtok(NULL, " \n");
 		}
 
