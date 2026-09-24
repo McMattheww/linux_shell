@@ -10,7 +10,6 @@
 #define maxArgs 20
 #define maxCommands 20
 
-
 typedef struct command_t {
 	char* name;
 	char* args[maxArgs];
@@ -29,15 +28,43 @@ void executeCommands(command_t* commands, int commandCount, int current){
 
 	int status;
 	pid_t pid;
+	int pip[2];
+	int outPipe = -1;
+	int inPipe = -1;
+	int nextInPipe = -1;
 	if (current == commandCount){
-		wait(&status);
+		wait(&status); // no commands left, wait for children
 	}
-	else{
+	else{ //fork child to commit next command
+		/*	
+		if (current != (commandCount - 1)){
+			pipe(pip);
+			outPipe = pip[1];
+			nextInPipe = pip[0];
+		}
+		else{outPipe = -1;}
+
+		if (nextInPipe != -1){
+			inPipe = nextInPipe;
+		}
+
+
+*/
 		if ((pid = fork()) < 0){
 			perror("fork failed");
 			exit(1);
 		}
 		else if (pid == 0){ //the child
+				    /*
+			if (inPipe != -1){
+				dup2(inPipe, 0);
+				close(inPipe);
+			}
+			if (outPipe != -1){
+				dup2(outPipe, 1);
+				close(outPipe);
+			}
+				*/
 			executeCommand(commands[current]);
 		}
 		else{ //the parent
