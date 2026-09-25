@@ -20,7 +20,8 @@ typedef struct command_t {
 
 void executeCommand(command_t command){
         printf("running: %s, arguments: %i \n", command.name, command.argc);
-        execvp(command.name, command.args); 
+        execvp(command.name, command.args);
+        exit(0);	
         return;
 }
 
@@ -55,7 +56,6 @@ void executeCommands(command_t* commands, int commandCount, int current){
 			exit(1);
 		}
 		else if (pid == 0){ //the child
-				    /*
 			if (inPipe != -1){
 				dup2(inPipe, 0);
 				close(inPipe);
@@ -64,7 +64,6 @@ void executeCommands(command_t* commands, int commandCount, int current){
 				dup2(outPipe, 1);
 				close(outPipe);
 			}
-				*/
 			executeCommand(commands[current]);
 		}
 		else{ //the parent
