@@ -19,56 +19,56 @@ typedef struct command_t {
 
 
 void executeCommand(command_t command){
-        printf("running: %s, arguments: %i \n", command.name, command.argc);
         execvp(command.name, command.args);
+	perror("execution failed");
         exit(0);	
         return;
 }
 
-void executeCommands(command_t* commands, int commandCount, int current){
-
+//inpipe - connecting this commands input to the previous commands output, 0 indicates first command should use stdin
+void executeCommands(command_t* commands, int commandCount, int current, int nextInPipe){
 	int status;
 	pid_t pid;
-	int pip[2];
-	int outPipe = -1;
-	int inPipe = -1;
-	int nextInPipe = -1;
-	if (current == commandCount){
-		wait(&status); // no commands left, wait for children
+	int currentPipe[2];
+	int outPipe;
+	int inPipe;
+	
+
+	//for every command but the very last we create a new pipe
+	if (current != (commandCount - 1)){ 
+		pipe(currentPipe);
+		outPipe = currentPipe[1];
+		inPipe = nextInPipe;
+		nextInPipe = currentPipe[0];
 	}
-	else{ //fork child to commit next command
-		/*	
-		if (current != (commandCount - 1)){
-			pipe(pip);
-			outPipe = pip[1];
-			nextInPipe = pip[0];
-		}
-		else{outPipe = -1;}
+	else{
+		inPipe = nextInPipe;
+		outPipe = 1;
+	}
 
-		if (nextInPipe != -1){
-			inPipe = nextInPipe;
-		}
-
-
-*/
+	if (current == commandCount){
+                wait(&status); // no commands left, parent waits for children to exit
+        }
+	else{ //fork child to execute next command
+		
 		if ((pid = fork()) < 0){
 			perror("fork failed");
 			exit(1);
 		}
 		else if (pid == 0){ //the child
-			if (inPipe != -1){
+			if (inPipe != 0){
 				dup2(inPipe, 0);
-				close(inPipe);
 			}
-			if (outPipe != -1){
+			if (outPipe != 1){
 				dup2(outPipe, 1);
-				close(outPipe);
 			}
 			executeCommand(commands[current]);
 		}
 		else{ //the parent
+		      printf("in pipe %i, out pipe %i", inPipe, outPipe);
+		      printf("executing %s with %i aguments", commands[current].name, commands[current].argc);
 			current++;
-			executeCommands(commands, commandCount, current);
+			executeCommands(commands, commandCount, current, nextInPipe);
 		}
 	}
 }
@@ -99,7 +99,7 @@ void processInput(char* tokens[], int tokenCount){
 		
 		i++;
 	}
-	executeCommands(commands, commandCount, 0);
+	executeCommands(commands, commandCount, 0, 0);
 
 	return;	
 
@@ -113,7 +113,7 @@ int main(int argc, char* argv[]) {
 	int tokenCount; // amount of tokens in "tokens"
 	char* tok; //curent token
 
-	printf("Welcome to VM shell\nenter command followed by arguments\nenter | between commands to pipe\n");
+	printf("Welcome to VM shell\nenter command followed by arguments\n");
 	fgets(input, maxInput, stdin);
 	while(!(tolower(input[0]) == 'q' && tolower(input[1]) == 'u' && tolower(input[2]) == 'i' && tolower(input[3]) == 't')){
 		tokenCount = 0;
@@ -132,5 +132,6 @@ int main(int argc, char* argv[]) {
 	return 0;
 
 }
+
 
 
