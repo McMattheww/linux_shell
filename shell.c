@@ -16,30 +16,28 @@ typedef struct command_t {
 	int argc;
 } command_t;
 
-
-
 void executeCommand(command_t command){
         execvp(command.name, command.args);
 	perror("execution failed");
         exit(0);	
-        return;
 }
 
-//inpipe - connecting this commands input to the previous commands output, 0 indicates first command should use stdin
-void executeCommands(command_t* commands, int commandCount, int current, int nextInPipe){
+void executeCommands(command_t* commands, size_t commandCount){
 	int status;
 	pid_t pid;
 	int currentPipe[2];
-	int outPipe;
-	int inPipe;
-	
 
+	for (int i = 0; i < commandCount; i++){
+		if (i != (commandCount - 1)) pipe(currentPipe);	
+		else{
+		
+		}
+	
+	}
+	
 	//for every command but the very last we create a new pipe
 	if (current != (commandCount - 1)){ 
 		pipe(currentPipe);
-		outPipe = currentPipe[1];
-		inPipe = nextInPipe;
-		nextInPipe = currentPipe[0];
 	}
 	else{
 		inPipe = nextInPipe;
@@ -99,7 +97,7 @@ void processInput(char* tokens[], int tokenCount){
 		
 		i++;
 	}
-	executeCommands(commands, commandCount, 0, 0);
+	executeCommands(commands, commandCount);
 
 	return;	
 
