@@ -26,49 +26,34 @@ void executeCommands(command_t* commands, size_t commandCount){
 	int status;
 	pid_t pid;
 	int currentPipe[2];
+	int nextIn = 0;
 
 	for (int i = 0; i < commandCount; i++){
 		if (i != (commandCount - 1)) pipe(currentPipe);	
-		else{
-		
-		}
 	
-	}
-	
-	//for every command but the very last we create a new pipe
-	if (current != (commandCount - 1)){ 
-		pipe(currentPipe);
-	}
-	else{
-		inPipe = nextInPipe;
-		outPipe = 1;
-	}
-
-	if (current == commandCount){
-                wait(&status); // no commands left, parent waits for children to exit
-        }
-	else{ //fork child to execute next command
-		
-		if ((pid = fork()) < 0){
-			perror("fork failed");
-			exit(1);
+		if ((pid = fork()) < 0){ 
+			perror("fork failed"); exit(1);
 		}
-		else if (pid == 0){ //the child
-			if (inPipe != 0){
-				dup2(inPipe, 0);
+		else if (pid == 0){
+			if (nextIn != 0){ 
+				dup2(nextIn, 0);
+				close(nextIn);
 			}
-			if (outPipe != 1){
-				dup2(outPipe, 1);
+			if (i != commandCount - 1){ 
+				dup2(currentPipe[1], 1);
+				close(currentPipe[1]);
 			}
-			executeCommand(commands[current]);
+			executeCommand(commands[i]);
 		}
 		else{ //the parent
-		      printf("in pipe %i, out pipe %i", inPipe, outPipe);
-		      printf("executing %s with %i aguments", commands[current].name, commands[current].argc);
-			current++;
-			executeCommands(commands, commandCount, current, nextInPipe);
+			close(currentPipe[1]);
+			if (nextIn != 0) close(nextIn);
+			nextIn = currentPipe[0];
+			//printf("in pipe %i, out pipe %i", inPipe, outPipe);
+			//printf("executing %s with %i aguments", commands[current].name, commands[current].argc);
 		}
 	}
+	wait(&status);
 }
 
 void processInput(char* tokens[], int tokenCount){
