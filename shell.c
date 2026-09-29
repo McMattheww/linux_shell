@@ -25,7 +25,7 @@ void executeCommand(command_t command){
 void executeCommands(command_t* commands, size_t commandCount){
 	int status;
 	pid_t pid;
-	int currentPipe[2];
+	int currentPipe[2] = {-1, -1};
 	int nextIn = 0;
 
 	for (int i = 0; i < commandCount; i++){
@@ -46,11 +46,12 @@ void executeCommands(command_t* commands, size_t commandCount){
 			executeCommand(commands[i]);
 		}
 		else{ //the parent
-			close(currentPipe[1]);
+			if (currentPipe[1] != -1)close(currentPipe[1]);
 			if (nextIn != 0) close(nextIn);
-			nextIn = currentPipe[0];
+			if (currentPipe[0] != -1)nextIn = currentPipe[0];
 		}
 	}
+	if (nextIn != 0) close(nextIn);
 	wait(&status);
 }
 
