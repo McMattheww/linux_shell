@@ -49,8 +49,6 @@ void executeCommands(command_t* commands, size_t commandCount){
 			close(currentPipe[1]);
 			if (nextIn != 0) close(nextIn);
 			nextIn = currentPipe[0];
-			//printf("in pipe %i, out pipe %i", inPipe, outPipe);
-			//printf("executing %s with %i aguments", commands[current].name, commands[current].argc);
 		}
 	}
 	wait(&status);
@@ -59,10 +57,10 @@ void executeCommands(command_t* commands, size_t commandCount){
 void processInput(char* tokens[], int tokenCount){
 	
 	int i = 0; int offset = 0; int commandCount = 0;
-
 	command_t com;
 	command_t commands[maxCommands];
 	com.argc = 0;
+
 	while(i < tokenCount && commandCount < maxCommands){
 		com.args[i - offset] = tokens[i];
 		com.argc++;
@@ -88,26 +86,25 @@ void processInput(char* tokens[], int tokenCount){
 
 }
 
-
 int main(int argc, char* argv[]) {
 
-	char input[maxInput] = "    "; //user shell input
+	char input[maxInput] = "  "; //user shell input
 	char* tokens[maxTokens]; //tokenized input
 	int tokenCount; // amount of tokens in "tokens"
 	char* tok; //curent token
 
-	printf("Welcome to VM shell\nenter command followed by arguments\n");
+	puts("Welcome to VM shell");
+	puts("enter command followed by arguments");
+	puts("enter | between commands to pipe");
 	fgets(input, maxInput, stdin);
 	while(!(tolower(input[0]) == 'q' && tolower(input[1]) == 'u' && tolower(input[2]) == 'i' && tolower(input[3]) == 't')){
 		tokenCount = 0;
-
 		tok = strtok(input, " \n");
 		while (tok != NULL && tokenCount < maxTokens){
 			tokens[tokenCount] = tok;
 			tokenCount++;
 			tok = strtok(NULL, " \n");
 		}
-
 		processInput(tokens, tokenCount);
 		fgets(input, maxInput, stdin);
 	}
@@ -115,6 +112,5 @@ int main(int argc, char* argv[]) {
 	return 0;
 
 }
-
 
 
