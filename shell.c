@@ -37,9 +37,6 @@ void executeCommands(command_t* commands, size_t commandCount){
 		else last = false;
 
 		if (!last) pipe(currentPipe);
-		else{
-			printf("ribs");
-		}	
 	
 		if ((pid = fork()) < 0){ 
 			perror("fork failed"); exit(1);
@@ -49,16 +46,10 @@ void executeCommands(command_t* commands, size_t commandCount){
 				dup2(nextIn, 0);
 				close(nextIn);
 			}
-			else{
-				printf("ribs2");
-			}
 			if (!last){ 
 				dup2(currentPipe[1], 1);
 				close(currentPipe[1]);
 				close(currentPipe[0]);
-			}
-			else{
-				printf("ribs3");
 			}
 			executeCommand(commands[i]);
 		}
