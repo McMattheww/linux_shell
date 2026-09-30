@@ -72,7 +72,13 @@ void processInput(char* tokens[], int tokenCount){
 	command_t com;
 	command_t commands[maxCommands];
 	com.argc = 0;
-
+	bool piped = false;
+	
+	//other invalid input- two pipe tokens in a row
+	if ((*(tokens[0]) == '|' && *(tokens[0]+1) == '\0') || (*(tokens[tokenCount-1]) == '|' && *(tokens[tokenCount-1]+1) == '\0')){
+		puts("invalid input");
+		return;
+	}
 	while(i < tokenCount && commandCount < maxCommands){
 		com.args[i - offset] = tokens[i];
 		com.argc++;
@@ -80,8 +86,13 @@ void processInput(char* tokens[], int tokenCount){
 		if ((*(tokens[i]) == '|' && *(tokens[i]+1) == '\0') || i == tokenCount - 1){
 			com.args[i - offset + 1] = NULL;
 			if (*(tokens[i]) == '|' && *(tokens[i]+1) == '\0'){
-				com.args[i - offset] = NULL; com.argc--;
+				if (piped){
+					puts("invalid input");
+					return;
+				}
+				com.args[i - offset] = NULL; com.argc--; piped = true;
 			}
+			else{ piped = false;}
 			com.name = com.args[0];
 			
 			commands[commandCount] = com;	
@@ -89,6 +100,7 @@ void processInput(char* tokens[], int tokenCount){
 			com.argc = 0;
 			offset = i + 1;
 		}
+		else {piped = false;}
 		
 		i++;
 	}
