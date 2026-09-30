@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <stdbool.h>
 #define maxInput 300
 #define maxTokens 100
 #define maxArgs 20
@@ -25,34 +26,53 @@ void executeCommand(command_t command){
 void executeCommands(command_t* commands, size_t commandCount){
 	int status;
 	pid_t pid;
-	int currentPipe[2] = {-1, -1};
-	int nextIn = 0;
+	int currentPipe[2];
+	int nextIn = -1;
+	bool first, last;
 
 	for (int i = 0; i < commandCount; i++){
-		if (i != (commandCount - 1)) pipe(currentPipe);	
+		if (i == 0) first = true;
+		else first = false;
+		if (i == (commandCount - 1)) last = true;
+		else last = false;
+
+		if (!last) pipe(currentPipe);
+		else{
+			printf("ribs");
+		}	
 	
 		if ((pid = fork()) < 0){ 
 			perror("fork failed"); exit(1);
 		}
 		else if (pid == 0){
-			if (nextIn != 0){ 
+			if (!first){ 
 				dup2(nextIn, 0);
 				close(nextIn);
 			}
-			if (i != commandCount - 1){ 
+			else{
+				printf("ribs2");
+			}
+			if (!last){ 
 				dup2(currentPipe[1], 1);
 				close(currentPipe[1]);
+				close(currentPipe[0]);
+			}
+			else{
+				printf("ribs3");
 			}
 			executeCommand(commands[i]);
 		}
 		else{ //the parent
-			if (currentPipe[1] != -1)close(currentPipe[1]);
-			if (nextIn != 0) close(nextIn);
-			if (currentPipe[0] != -1)nextIn = currentPipe[0];
+			if (!first){
+				close(nextIn);
+			}
+			if (!last){
+				nextIn = currentPipe[0];
+				close(currentPipe[1]);
+			}
 		}
 	}
-	if (nextIn != 0) close(nextIn);
-	wait(&status);
+	for (int i = 0; i < commandCount; i++) wait(&status);
 }
 
 void processInput(char* tokens[], int tokenCount){
