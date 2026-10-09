@@ -74,42 +74,26 @@ void processInput(char* tokens[], int tokenCount){
 	command_t com;
 	command_t commands[maxCommands];
 	com.argc = 0;
-	bool piped = false;
-	
-	//other invalid input- two pipe tokens in a row
-	if ((*(tokens[0]) == '|' && *(tokens[0]+1) == '\0') || (*(tokens[tokenCount-1]) == '|' && *(tokens[tokenCount-1]+1) == '\0')){
-		puts("invalid input");
-		return;
-	}
-	while(i < tokenCount && commandCount < maxCommands){
-		com.args[i - offset] = tokens[i];
-		com.argc++;
+	bool inRedirect = false;
+	bool outRedirect = false;
 
-		if ((*(tokens[i]) == '|' && *(tokens[i]+1) == '\0') || i == tokenCount - 1){
-			com.args[i - offset + 1] = NULL;
-			if (*(tokens[i]) == '|' && *(tokens[i]+1) == '\0'){
-				if (piped){
-					puts("invalid input");
-					return;
-				}
-				com.args[i - offset] = NULL; com.argc--; piped = true;
-			}
-			else{ piped = false;}
+	while(i < (tokenCount + 1) && commandCount < maxCommands){
+		if ( i == tokenCount || (*(tokens[i]) == '|' && *(tokens[i]+1) == '\0')){
+			com.args[i - offset] = NULL;
 			com.name = com.args[0];
-			
 			commands[commandCount] = com;	
 			commandCount++;
 			com.argc = 0;
 			offset = i + 1;
 		}
-		else {piped = false;}
-		
+		else{
+			com.args[i - offset] = tokens[i];
+			com.argc++;
+		}
 		i++;
 	}
 	executeCommands(commands, commandCount);
-
 	return;	
-
 }
 
 int main(int argc, char* argv[]) {
