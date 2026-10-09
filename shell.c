@@ -20,7 +20,7 @@ typedef struct command_t {
 void executeCommand(command_t command){
         execvp(command.name, command.args);
 	perror("execution failed");
-        exit(0);	
+        exit(1);	
 }
 
 void executeCommands(command_t* commands, size_t commandCount){
@@ -54,6 +54,7 @@ void executeCommands(command_t* commands, size_t commandCount){
 			executeCommand(commands[i]);
 		}
 		else{ //the parent
+			perror("application launched");
 			if (!first){
 				close(nextIn);
 			}
@@ -61,6 +62,7 @@ void executeCommands(command_t* commands, size_t commandCount){
 				nextIn = currentPipe[0];
 				close(currentPipe[1]);
 			}
+			
 		}
 	}
 	for (int i = 0; i < commandCount; i++) wait(&status);
