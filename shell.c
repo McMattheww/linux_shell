@@ -74,79 +74,80 @@ void executeCommands(command_t* commands, size_t commandCount){
 }
 
 void processInput(char *tokens[], int tokenCount) {
-    int commandCount = 0;
-    command_t com = {0};
-    command_t commands[maxCommands] = {0};
+	int commandCount = 0;
+	command_t com = {0};
+	command_t commands[maxCommands] = {0};
 
-    for (int i = 0; i < tokenCount; i++) {
-        if (strcmp(tokens[i], "|") == 0) {
-            if (com.argc == 0) {
-                fprintf(stderr, "Missing command before pipe\n");
-                return;
-            }
+	for (int i = 0; i < tokenCount; i++) {
+		if (strcmp(tokens[i], "|") == 0) {
+			if (com.argc == 0) {
+				fprintf(stderr, "Missing command before pipe\n");
+				return;
+			}
 
-            com.args[com.argc] = NULL;
-            com.name = com.args[0];
+			com.args[com.argc] = NULL;
+			com.name = com.args[0];
 
-            if (commandCount >= maxCommands) {
-                fprintf(stderr, "Too many commands\n");
-                return;
-            }
+			if (commandCount >= maxCommands) {
+				fprintf(stderr, "Too many commands\n");
+				return;
+			}
 
-            commands[commandCount++] = com;
-            com = (command_t){0};
-        }
-        else if (strcmp(tokens[i], "<") == 0) {
-            if (i + 1 >= tokenCount) {
-                fprintf(stderr, "Missing input filename\n");
-                return;
-            }
-            com.inFile = tokens[++i];
-            com.redir = (com.redir == out) ? inOut : in;
-        }
-        else if (strcmp(tokens[i], ">") == 0) {
-            if (i + 1 >= tokenCount) {
-                fprintf(stderr, "Missing output filename\n");
-                return;
-            }
-            com.outFile = tokens[++i];
-            com.redir = (com.redir == in) ? inOut : out;
-        }
-	else if (strcmp(tokens[i], ">!") == 0) {
-            if (i + 1 >= tokenCount) {
-                fprintf(stderr, "Missing output filename\n");
-                return;
-            }
-            com.outFile = tokens[++i];
-            com.redir = (com.redir == in) ? inOutForce : outForce;
-        }
-        else {
-            if (com.argc >= maxArgs - 1) {
-                fprintf(stderr, "Too many arguments\n");
-                return;
-            }
+			commands[commandCount++] = com;
+			com = (command_t){0};
+		}
+		else if (strcmp(tokens[i], "<") == 0) {
+			if (i + 1 >= tokenCount) {
+				fprintf(stderr, "Missing input filename\n");
+				return;
+			}
+			com.inFile = tokens[++i];
+			com.redir = (com.redir == out) ? inOut : in;
+		}
+		else if (strcmp(tokens[i], ">") == 0) {
+			if (i + 1 >= tokenCount) {
+				fprintf(stderr, "Missing output filename\n");
+				return;
+			}
+			com.outFile = tokens[++i];
+			com.redir = (com.redir == in) ? inOut : out;
+		}
+		else if (strcmp(tokens[i], ">!") == 0) {
+			if (i + 1 >= tokenCount) {
+			fprintf(stderr, "Missing output filename\n");
+			return;
+			}
+			com.outFile = tokens[++i];
+			com.redir = (com.redir == in) ? inOutForce : outForce;
+		}
+		else {
+			if (com.argc >= maxArgs - 1) {
+				fprintf(stderr, "Too many arguments\n");
+				return;
+			}
 
-            com.args[com.argc++] = tokens[i];
-        }
-    }
+			com.args[com.argc++] = tokens[i];
+		}
+	}
 
-    if (com.argc == 0) {
-        fprintf(stderr, "Missing command after pipe or empty input\n");
-        return;
-    }
+	if (com.argc == 0) {
+		fprintf(stderr, "Missing command after pipe or empty input\n");
+		return;
+	}
 
-    com.args[com.argc] = NULL;
-    com.name = com.args[0];
+	com.args[com.argc] = NULL;
+	com.name = com.args[0];
 
-    if (commandCount >= maxCommands) {
-        fprintf(stderr, "Too many commands\n");
-        return;
-    }
+	if (commandCount >= maxCommands) {
+		fprintf(stderr, "Too many commands\n");
+		return;
+	}
 
-    commands[commandCount++] = com;
+	commands[commandCount++] = com;
 
-    executeCommands(commands, commandCount);
+	executeCommands(commands, commandCount);
 }
+
 int main(int argc, char* argv[]) {
 
 	char input[maxInput] = "  "; //user shell input
