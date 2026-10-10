@@ -11,10 +11,15 @@
 #define maxArgs 20
 #define maxCommands 20
 
+enum redirection {none, in, out, inOut, outForce, inOutForce};
+
 typedef struct command_t {
 	char* name;
 	char* args[maxArgs];
 	int argc;
+	char* inFile;
+	char* outFile;
+	enum redirection redir;
 } command_t;
 
 void executeCommand(command_t command){
@@ -74,23 +79,48 @@ void processInput(char* tokens[], int tokenCount){
 	command_t com;
 	command_t commands[maxCommands];
 	com.argc = 0;
-	bool inRedirect = false;
-	bool outRedirect = false;
+	com.redir = none;
+	
 
-	while(i < (tokenCount + 1) && commandCount < maxCommands){
-		if ( i == tokenCount || (*(tokens[i]) == '|' && *(tokens[i]+1) == '\0')){
+	while(i < tokenCount && commandCount < maxCommands){
+		if (*(tokens[i]) == '|'){
 			com.args[i - offset] = NULL;
 			com.name = com.args[0];
 			commands[commandCount] = com;	
 			commandCount++;
 			com.argc = 0;
+			com.redir = none;
 			offset = i + 1;
+			
+		}
+		else if(*(tokens[i]) == '<'){
+			if ((i+1)<tokenCount){
+				com.redir = in;
+				com.inFile = tokens[i + 1]; i++;
+			}
+			else break;
+		}
+		else if(*(tokens[i]) == '>'){
+			if ((i+1)<tokenCount){
+				if (com.redir != in)com.redir = out;
+				else com.redir = inOut;
+				com.outFile = tokens[i + 1]; i++;
+			}
+			else break;
 		}
 		else{
 			com.args[i - offset] = tokens[i];
 			com.argc++;
 		}
 		i++;
+	}
+	com.args[tokenCount] = NULL;
+	com.name = com.args[0];
+	commands[commandCount] = com;
+	commandCount++;
+
+	for (int i = 0; i < commandCount; i++){
+		printf("%s  enum:%i", commands[i].name, commands[i].redir);
 	}
 	executeCommands(commands, commandCount);
 	return;	
