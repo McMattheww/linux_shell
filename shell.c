@@ -73,59 +73,80 @@ void executeCommands(command_t* commands, size_t commandCount){
 	for (int i = 0; i < commandCount; i++) wait(&status);
 }
 
-void processInput(char* tokens[], int tokenCount){
-	
-	int i = 0; int offset = 0; int commandCount = 0;
-	command_t com;
-	command_t commands[maxCommands];
-	com.argc = 0;
-	com.redir = none;
-	
+void processInput(char *tokens[], int tokenCount) {
+    int commandCount = 0;
+    command_t com = {0};
+    command_t commands[maxCommands] = {0};
 
-	while(i < tokenCount && commandCount < maxCommands){
-		if (*(tokens[i]) == '|'){
-			com.args[i - offset] = NULL;
-			com.name = com.args[0];
-			commands[commandCount] = com;	
-			commandCount++;
-			com.argc = 0;
-			com.redir = none;
-			offset = i + 1;
-			
-		}
-		else if(*(tokens[i]) == '<'){
-			if ((i+1)<tokenCount){
-				com.redir = in;
-				com.inFile = tokens[i + 1]; i++;
-			}
-			else break;
-		}
-		else if(*(tokens[i]) == '>'){
-			if ((i+1)<tokenCount){
-				if (com.redir != in)com.redir = out;
-				else com.redir = inOut;
-				com.outFile = tokens[i + 1]; i++;
-			}
-			else break;
-		}
-		else{
-			com.args[i - offset] = tokens[i];
-			com.argc++;
-		}
-		i++;
-	}
-	com.args[tokenCount] = NULL;
-	com.name = com.args[0];
-	commands[commandCount] = com;
-	commandCount++;
+    for (int i = 0; i < tokenCount; i++) {
+        if (strcmp(tokens[i], "|") == 0) {
+            if (com.argc == 0) {
+                fprintf(stderr, "Missing command before pipe\n");
+                return;
+            }
 
-	for (int i = 0; i < commandCount; i++){
-		printf("%s  enum:%i", commands[i].name, commands[i].redir);
-	}
-	executeCommands(commands, commandCount);
-	return;	
+            com.args[com.argc] = NULL;
+            com.name = com.args[0];
+
+            if (commandCount >= maxCommands) {
+                fprintf(stderr, "Too many commands\n");
+                return;
+            }
+
+            commands[commandCount++] = com;
+            com = (command_t){0};
+        }
+        else if (strcmp(tokens[i], "<") == 0) {
+            if (i + 1 >= tokenCount) {
+                fprintf(stderr, "Missing input filename\n");
+                return;
+            }
+            com.inFile = tokens[++i];
+            com.redir = (com.redir == out) ? inOut : in;
+        }
+        else if (strcmp(tokens[i], ">") == 0) {
+            if (i + 1 >= tokenCount) {
+                fprintf(stderr, "Missing output filename\n");
+                return;
+            }
+            com.outFile = tokens[++i];
+            com.redir = (com.redir == in) ? inOut : out;
+        }
+	else if (strcmp(tokens[i], ">!") == 0) {
+            if (i + 1 >= tokenCount) {
+                fprintf(stderr, "Missing output filename\n");
+                return;
+            }
+            com.outFile = tokens[++i];
+            com.redir = (com.redir == in) ? inOutForce : outForce;
+        }
+        else {
+            if (com.argc >= maxArgs - 1) {
+                fprintf(stderr, "Too many arguments\n");
+                return;
+            }
+
+            com.args[com.argc++] = tokens[i];
+        }
+    }
+
+    if (com.argc == 0) {
+        fprintf(stderr, "Missing command after pipe or empty input\n");
+        return;
+    }
+
+    com.args[com.argc] = NULL;
+    com.name = com.args[0];
+
+    if (commandCount >= maxCommands) {
+        fprintf(stderr, "Too many commands\n");
+        return;
+    }
+
+    commands[commandCount++] = com;
+
+    executeCommands(commands, commandCount);
 }
-
 int main(int argc, char* argv[]) {
 
 	char input[maxInput] = "  "; //user shell input
@@ -136,6 +157,7 @@ int main(int argc, char* argv[]) {
 	puts("Welcome to VM shell");
 	puts("enter command followed by arguments");
 	puts("enter | between commands to pipe");
+	printf("$ ");
 	fgets(input, maxInput, stdin);
 	while(!(tolower(input[0]) == 'q' && tolower(input[1]) == 'u' && tolower(input[2]) == 'i' && tolower(input[3]) == 't')){
 		tokenCount = 0;
@@ -146,6 +168,7 @@ int main(int argc, char* argv[]) {
 			tok = strtok(NULL, " \n");
 		}
 		processInput(tokens, tokenCount);
+		printf("$ ");
 		fgets(input, maxInput, stdin);
 	}
 
