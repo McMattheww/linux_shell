@@ -6,6 +6,7 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <stdbool.h>
+#include <fcntl.h>
 #define maxInput 300
 #define maxTokens 100
 #define maxArgs 20
@@ -28,12 +29,14 @@ void executeCommand(command_t command){
         exit(1);	
 }
 
+
 void executeCommands(command_t* commands, size_t commandCount){
 	int status;
 	pid_t pid;
 	int currentPipe[2];
 	int nextIn = -1;
 	bool first, last;
+	int fd;
 
 	for (int i = 0; i < commandCount; i++){
 		if (i == 0) first = true;
@@ -51,10 +54,44 @@ void executeCommands(command_t* commands, size_t commandCount){
 				dup2(nextIn, 0);
 				close(nextIn);
 			}
+			else{
+				if (commands[i].redir == in || commands[i].redir == inOut || commands[i].redir == inOutForce){
+					fd = open(commands[i].inFile, O_RDONLY);
+					if (fd  != -1){
+						dup2(fd, 0);
+						close(fd);		
+					}	
+					else{
+						perror("input file could not be opened");
+					}
+				}
+			}
 			if (!last){ 
 				dup2(currentPipe[1], 1);
 				close(currentPipe[1]);
 				close(currentPipe[0]);
+			}
+			else{
+				if (commands[i].redir == out || commands[i].redir == inOut){
+					fd = open(commands[i].outFile, O_WRONLY | O_CREAT | O_APPEND, 0644);
+					if (fd  != -1){
+						dup2(fd, 1);
+						close(fd);
+					}
+					else{
+						perror("output file could not be opened");
+					}
+				}
+				else if (commands[i].redir == outForce || commands[i].redir == inOutForce){
+					fd = open(commands[i].outFile, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+					if (fd  != -1){
+						dup2(fd, 1);
+						close(fd);
+					}
+					else{
+						perror("output file could not be opened");
+					}
+				}
 			}
 			executeCommand(commands[i]);
 		}
