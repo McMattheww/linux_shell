@@ -49,19 +49,20 @@ void executeCommands(command_t* commands, size_t commandCount){
 		if (i == (commandCount - 1)) last = true; // is this command the last?
 		else last = false;
 
-		//if this is not the last command, we want to create a pipe to conect this command to the next
+		//if this is not the last command, we want to create a pipe to connect it to the next 
 		if (!last) pipe(currentPipe); 
 		
-		//fork child to execute command
+		//fork and check for error
 		if ((pid = fork()) < 0){ 
 			perror("fork failed"); exit(1);
 		}
-		else if (pid == 0){ // child process - execute command
-			if (!first){ // if not the first command
-				dup2(nextIn, 0); // dup output end of last command's pipe to this command's stdin
+		// child process - execute command
+		else if (pid == 0){ 
+			if (!first){ // if not the first command - need to pipe input from last one
+				dup2(nextIn, 0); // dup input end of last command's pipe to this command's stdin
 				close(nextIn);
 			}
-			else{ //is first command
+			else{ //is first command - check for input redirection
 				if (commands[i].redir == in || commands[i].redir == inOut || commands[i].redir == inOutForce){
 				//if first command has input redirection
 					fd = open(commands[i].inFile, O_RDONLY); //attempt to open its input file
@@ -74,12 +75,12 @@ void executeCommands(command_t* commands, size_t commandCount){
 					}
 				}
 			}
-			if (!last){ //is not the last command
+			if (!last){ //is not the last command - need to pipe output to next one
 				dup2(currentPipe[1], 1); //dup output end of current pipe to stdout
 				close(currentPipe[1]); //close pipes created by parent
 				close(currentPipe[0]);
 			}
-			else{ //is last command
+			else{ //is last command - check for output redirection
 				if (commands[i].redir == out || commands[i].redir == inOut){ //command had output redirection
 					fd = open(commands[i].outFile, O_WRONLY | O_CREAT | O_APPEND, 0644);
 					if (fd  != -1){
@@ -101,21 +102,23 @@ void executeCommands(command_t* commands, size_t commandCount){
 					}
 				}
 			}
+			//input/output setup finished, launch program
 			executeCommand(commands[i]);
 		}
-		else{ //the parent
+		//parent process
+		else{ 
 			perror("application launched");
 			if (!first){
 				close(nextIn); //close input pipe left over from previous iteration
 			}
 			if (!last){
-				nextIn = currentPipe[0];
+				nextIn = currentPipe[0]; //save this iteration's input pipe for use next iteration
 				close(currentPipe[1]); //close output pipe from this iteration
 			}
 			
 		}
 	}
-	//wait for each process to finsh
+	//once all commands are lauched, parent waits for each process to finsh
 	for (int i = 0; i < commandCount; i++) wait(&status);
 }
 
