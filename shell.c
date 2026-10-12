@@ -12,6 +12,8 @@
 #define maxArgs 20
 #define maxCommands 20
 
+int historyCount = 0;
+char history[5][maxInput];
 
 enum redirection {none, in, out, inOut, outForce, inOutForce};
 
@@ -25,8 +27,15 @@ typedef struct command_t {
 	enum redirection redir;	//whether this command redirects input/output
 } command_t;
 
+
 //launch command from struct
 void executeCommand(command_t command){
+	if (strcmp(command.name, "history") == 0){
+		for(int i = 0; i < historyCount; i++){
+			printf("[%i] %s",(historyCount-i), history[i]);
+		}
+		exit(1);
+	}
         execvp(command.name, command.args);
 	perror("execution failed");
         exit(1);	
@@ -34,7 +43,7 @@ void executeCommand(command_t command){
 
 //given an array of command structs that are piped together and the count,
 //execute each command, handling piping and in/output redirection correctly 
-void executeCommands(command_t* commands, size_t commandCount){
+void executeCommands(command_t* commands, size_t commandCount, char* input){
 	int status; 
 	pid_t pid;  
 	int currentPipe[2];
@@ -107,7 +116,6 @@ void executeCommands(command_t* commands, size_t commandCount){
 		}
 		//parent process
 		else{ 
-			perror("application launched");
 			if (!first){
 				close(nextIn); //close input pipe left over from previous iteration
 			}
@@ -119,10 +127,28 @@ void executeCommands(command_t* commands, size_t commandCount){
 		}
 	}
 	//once all commands are lauched, parent waits for each process to finsh
-	for (int i = 0; i < commandCount; i++) wait(&status);
+	bool success = true;
+	for (int i = 0; i < commandCount; i++){ 
+		wait(&status); 
+		if (status != 0){ success = false;}
+	}
+	if (success){
+	
+		if (historyCount < 5) {
+			strcpy(history[historyCount], input);
+			historyCount++;
+		}
+		else{
+			for (int i = 0; i < 4; i++){
+				strcpy(history[i], history[i + 1]);
+			}
+			strcpy(history[4], input);
+		}
+		
+	}
 }
 
-void processInput(char *tokens[], int tokenCount) {
+void processInput(char *tokens[], int tokenCount, char* input) {
 	int commandCount = 0;
 	command_t com = {0};
 	command_t commands[maxCommands] = {0};
@@ -194,12 +220,13 @@ void processInput(char *tokens[], int tokenCount) {
 
 	commands[commandCount++] = com;
 
-	executeCommands(commands, commandCount);
+	executeCommands(commands, commandCount, input);
 }
 
 int main(int argc, char* argv[]) {
 
 	char input[maxInput] = "  "; //user shell input
+	char inputBak[maxInput];
 	char* tokens[maxTokens]; //tokenized input
 	int tokenCount; // amount of tokens in "tokens"
 	char* tok; //curent token
@@ -209,6 +236,7 @@ int main(int argc, char* argv[]) {
 	puts("enter | between commands to pipe");
 	printf("$ ");
 	fgets(input, maxInput, stdin);
+	strcpy(inputBak, input);
 	while(!(tolower(input[0]) == 'q' && tolower(input[1]) == 'u' && tolower(input[2]) == 'i' && tolower(input[3]) == 't')){
 		tokenCount = 0;
 		tok = strtok(input, " \n");
@@ -217,9 +245,20 @@ int main(int argc, char* argv[]) {
 			tokenCount++;
 			tok = strtok(NULL, " \n");
 		}
-		processInput(tokens, tokenCount);
+		processInput(tokens, tokenCount, inputBak);
 		printf("$ ");
 		fgets(input, maxInput, stdin);
+		if (input[0] == '!' && input[1] >= '1' && input[1] <= '5' && (input[2] == '\n' || input[2] == '\0')) {
+			int number = input[1] - '0';
+			if (number <= historyCount) {
+				strcpy(input, history[historyCount - number]);
+			} 
+			else {
+				fprintf(stderr, "Invalid history number\n");
+				continue;
+			}
+		}
+		strcpy(inputBak, input);
 	}
 
 	return 0;
