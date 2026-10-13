@@ -67,7 +67,7 @@ void executeCommands(command_t* commands, size_t commandCount, char* input){
 		}
 		// child process - execute command
 		else if (pid == 0){ 
-			if (!first){ // if not the first command - need to pipe input from last one
+			if (!first){ // if not the first command
 				dup2(nextIn, 0); // dup input end of last command's pipe to this command's stdin
 				close(nextIn);
 			}
@@ -85,23 +85,13 @@ void executeCommands(command_t* commands, size_t commandCount, char* input){
 					}
 				}
 			}
-			if (!last){ //is not the last command - need to pipe output to next one
+			if (!last){ //is not the last command 
 				dup2(currentPipe[1], 1); //dup output end of current pipe to stdout
 				close(currentPipe[1]); //close pipes created by parent
 				close(currentPipe[0]);
 			}
 			else{ //is last command - check for output redirection
-				if (commands[i].redir == out || commands[i].redir == inOut){ //command had output redirectioi
-					/*int fdr = open(commands[i].outFile, O_RDONLY);
-						if (fdr != -1){
-							perror("attempting to overwrite existing file");
-							close(fdr);
-							exit(1);
-						
-						
-						}
-						close(fdr);
-	*/						
+				if (commands[i].redir == out || commands[i].redir == inOut){ //command had output redirectioin	
 					fd = open(commands[i].outFile, O_WRONLY | O_EXCL | O_CREAT, 0644);
 					
 					if (fd  != -1){
@@ -146,7 +136,7 @@ void executeCommands(command_t* commands, size_t commandCount, char* input){
 		wait(&status); 
 		if (status != 0){ success = false;}
 	}
-	if (success){
+	if (success){ //if all children exited successfully with 0, save command to history
 	
 		if (historyCount < 5) {
 			strcpy(history[historyCount], input);
@@ -162,30 +152,32 @@ void executeCommands(command_t* commands, size_t commandCount, char* input){
 	}
 }
 
+//split input string into an array of command_t structs and execute them
 void processInput(char *tokens[], int tokenCount, char* input) {
 	int commandCount = 0;
-	command_t com = {0};
-	command_t commands[maxCommands] = {0};
+	command_t com = {0}; //current command
+	command_t commands[maxCommands] = {0}; //all commands
 
-	for (int i = 0; i < tokenCount; i++) {
-		if (strcmp(tokens[i], "|") == 0) {
+	for (int i = 0; i < tokenCount; i++) { //for each token 
+							
+		if (strcmp(tokens[i], "|") == 0) { //next token is pipe
 			if (com.argc == 0) {
 				fprintf(stderr, "Missing command before pipe\n");
 				return;
 			}
 
-			com.args[com.argc] = NULL;
-			com.name = com.args[0];
+			com.args[com.argc] = NULL; //set last arg to NULL as required to execute program
+			com.name = com.args[0]; //set command struct name to last argument
 
 			if (commandCount >= maxCommands) {
 				fprintf(stderr, "Too many commands\n");
 				return;
 			}
 
-			commands[commandCount++] = com;
-			com = (command_t){0};
+			commands[commandCount++] = com; //add command to list
+			com = (command_t){0}; //reinitialize current command to empty
 		}
-		else if (strcmp(tokens[i], "<") == 0) {
+		else if (strcmp(tokens[i], "<") == 0) { //next token is input redirection
 			if (i + 1 >= tokenCount) {
 				fprintf(stderr, "Missing input filename\n");
 				return;
@@ -193,7 +185,7 @@ void processInput(char *tokens[], int tokenCount, char* input) {
 			com.inFile = tokens[++i];
 			com.redir = (com.redir == out) ? inOut : in;
 		}
-		else if (strcmp(tokens[i], ">") == 0) {
+		else if (strcmp(tokens[i], ">") == 0) {	//next token is output redirection
 			if (i + 1 >= tokenCount) {
 				fprintf(stderr, "Missing output filename\n");
 				return;
@@ -201,7 +193,7 @@ void processInput(char *tokens[], int tokenCount, char* input) {
 			com.outFile = tokens[++i];
 			com.redir = (com.redir == in) ? inOut : out;
 		}
-		else if (strcmp(tokens[i], ">!") == 0) {
+		else if (strcmp(tokens[i], ">!") == 0) { //next token is forced output redirection
 			if (i + 1 >= tokenCount) {
 			fprintf(stderr, "Missing output filename\n");
 			return;
@@ -209,30 +201,30 @@ void processInput(char *tokens[], int tokenCount, char* input) {
 			com.outFile = tokens[++i];
 			com.redir = (com.redir == in) ? inOutForce : outForce;
 		}
-		else {
+		else { //else token was part of a command
 			if (com.argc >= maxArgs - 1) {
 				fprintf(stderr, "Too many arguments\n");
 				return;
 			}
 
-			com.args[com.argc++] = tokens[i];
+			com.args[com.argc++] = tokens[i]; //add to command struct arg list
 		}
 	}
 
-	if (com.argc == 0) {
+	if (com.argc == 0) { 
 		fprintf(stderr, "Missing command after pipe or empty input\n");
 		return;
 	}
 
-	com.args[com.argc] = NULL;
-	com.name = com.args[0];
+	com.args[com.argc] = NULL; //set last arg to NULL as required to execute program
+	com.name = com.args[0]; //set command struct name to first argument
 
 	if (commandCount >= maxCommands) {
 		fprintf(stderr, "Too many commands\n");
 		return;
 	}
 
-	commands[commandCount++] = com;
+	commands[commandCount++] = com; //add last command to list
 
 	executeCommands(commands, commandCount, input);
 }
@@ -243,36 +235,38 @@ int main(int argc, char* argv[]) {
 	char inputBak[maxInput];
 	char* tokens[maxTokens]; //tokenized input
 	int tokenCount; // amount of tokens in "tokens"
-	char* tok; //curent token
+	char* tok; // curent token
 
 	puts("Welcome to VM shell");
 	puts("enter command followed by arguments");
 	puts("enter | between commands to pipe");
 	printf("$ ");
-	fgets(input, maxInput, stdin);
-	strcpy(inputBak, input);
+	fgets(input, maxInput, stdin); // get input first time
+	strcpy(inputBak, input); //backup of input to store in history
 	while(!(tolower(input[0]) == 'q' && tolower(input[1]) == 'u' && tolower(input[2]) == 'i' && tolower(input[3]) == 't')){
+	// while the user doesnt type quit
 		tokenCount = 0;
-		tok = strtok(input, " \n");
+		tok = strtok(input, " \n"); //tokenize input
 		while (tok != NULL && tokenCount < maxTokens){
 			tokens[tokenCount] = tok;
 			tokenCount++;
 			tok = strtok(NULL, " \n");
 		}
-		processInput(tokens, tokenCount, inputBak);
-		printf("$ ");
-		fgets(input, maxInput, stdin);
+		processInput(tokens, tokenCount, inputBak); // process input and execute commands
+		printf("$ "); 
+		fgets(input, maxInput, stdin); //keep getting input
+		//check if input is command to repeat history
 		if (input[0] == '!' && input[1] >= '1' && input[1] <= '5' && (input[2] == '\n' || input[2] == '\0')) {
-			int number = input[1] - '0';
-			if (number <= historyCount) {
-				strcpy(input, history[historyCount - number]);
+			int number = input[1] - '0'; //get input number
+			if (number <= historyCount) {	//if a command that old exists
+				strcpy(input, history[historyCount - number]);	//reload that previous command into input string
 			} 
 			else {
 				fprintf(stderr, "Invalid history number\n");
 				continue;
 			}
 		}
-		strcpy(inputBak, input);
+		strcpy(inputBak, input); //copy new string into backup
 	}
 
 	return 0;
