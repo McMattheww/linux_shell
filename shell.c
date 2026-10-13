@@ -81,6 +81,7 @@ void executeCommands(command_t* commands, size_t commandCount, char* input){
 					}	
 					else{
 						perror("input file could not be opened");
+						exit(1);
 					}
 				}
 			}
@@ -90,14 +91,26 @@ void executeCommands(command_t* commands, size_t commandCount, char* input){
 				close(currentPipe[0]);
 			}
 			else{ //is last command - check for output redirection
-				if (commands[i].redir == out || commands[i].redir == inOut){ //command had output redirection
-					fd = open(commands[i].outFile, O_WRONLY | O_CREAT | O_APPEND, 0644);
+				if (commands[i].redir == out || commands[i].redir == inOut){ //command had output redirectioi
+					/*int fdr = open(commands[i].outFile, O_RDONLY);
+						if (fdr != -1){
+							perror("attempting to overwrite existing file");
+							close(fdr);
+							exit(1);
+						
+						
+						}
+						close(fdr);
+	*/						
+					fd = open(commands[i].outFile, O_WRONLY | O_EXCL | O_CREAT, 0644);
+					
 					if (fd  != -1){
 						dup2(fd, 1); // dup output file to stdout
 						close(fd);
 					}
 					else{
 						perror("output file could not be opened");
+						exit(1);
 					}
 				}
 				else if (commands[i].redir == outForce || commands[i].redir == inOutForce){ //command had forced output redirection
@@ -108,6 +121,7 @@ void executeCommands(command_t* commands, size_t commandCount, char* input){
 					}
 					else{
 						perror("output file could not be opened");
+						exit(1);
 					}
 				}
 			}
